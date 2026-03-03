@@ -78,6 +78,16 @@ function createItemFromImageUrl({ imageUrl, itemId, boardWidth, boardHeight, han
   };
 }
 
+function clampCardToBoard(card, boardWidth, boardHeight) {
+  const maxX = Math.max(0, boardWidth - card.w);
+  const maxY = Math.max(0, boardHeight - card.h);
+  return {
+    ...card,
+    x: Math.min(Math.max(0, card.x), maxX),
+    y: Math.min(Math.max(0, card.y), maxY),
+  };
+}
+
 function getOrCreateClientId() {
   if (typeof window === "undefined") return crypto.randomUUID();
 
@@ -379,6 +389,24 @@ export default function PolaroidBoard() {
   }, []);
 
   useEffect(() => {
+    if (boardWidth <= 0 || boardHeight <= 0) return;
+
+    setCards((prev) => {
+      let changed = false;
+      const next = prev.map((card) => {
+        const clamped = clampCardToBoard(card, boardWidth, boardHeight);
+        if (clamped.x !== card.x || clamped.y !== card.y) {
+          changed = true;
+          return clamped;
+        }
+        return card;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [boardWidth, boardHeight]);
+
+  useEffect(() => {
     if (!supabase) {
       setIsLoading(false);
       return;
@@ -633,20 +661,43 @@ export default function PolaroidBoard() {
   }, []);
 
   const handleExport = () => {
-    const uri = stageRef.current?.toDataURL({ pixelRatio: 2 });
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const uri = stage.toDataURL({ pixelRatio: 2 });
     if (!uri) return;
 
-    const anchor = document.createElement("a");
-    anchor.download = `polaroid-board-${Date.now()}.png`;
-    anchor.href = uri;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    const image = new window.Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.fillStyle = "#f6efe3";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0);
+
+      const finalUri = canvas.toDataURL("image/png");
+      const anchor = document.createElement("a");
+      anchor.download = `polaroid-board-${Date.now()}.png`;
+      anchor.href = finalUri;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+    };
+    image.src = uri;
   };
 
   const handleStageMouseDown = (event) => {
-    if (hangingMode && isDrawingRope && event.target === event.target.getStage()) {
-      const pointer = event.target.getStage()?.getPointerPosition();
+    const stage = event.target.getStage();
+    if (!stage) return;
+
+    const clickedCard = event.target.findAncestor?.(".polaroid-card", true);
+    if (hangingMode && isDrawingRope && !clickedCard) {
+      const pointer = stage.getPointerPosition();
       if (!pointer) return;
 
       isPaintingRopeRef.current = true;
@@ -654,7 +705,7 @@ export default function PolaroidBoard() {
       return;
     }
 
-    if (event.target === event.target.getStage()) {
+    if (!clickedCard) {
       setSelectedId(null);
     }
   };

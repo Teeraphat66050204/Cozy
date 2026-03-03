@@ -3,6 +3,19 @@ import PolaroidBoard from "./components/PolaroidBoard";
 
 const INITIAL_VOLUME = 0.05;
 const ONBOARDING_KEY = "cozy_board_onboarding_seen_v2";
+const MOBILE_BREAKPOINT = 768;
+
+function getInitialPlayerPos() {
+  if (typeof window === "undefined") return { x: 16, y: 16 };
+
+  const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+  const width = isMobile ? 220 : 290;
+  const height = isMobile ? 82 : 92;
+  return {
+    x: Math.max(8, window.innerWidth - width - 12),
+    y: isMobile ? 108 : Math.max(8, window.innerHeight - height - 16),
+  };
+}
 
 export default function App() {
   const playerRef = useRef(null);
@@ -14,15 +27,7 @@ export default function App() {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(ONBOARDING_KEY) !== "1";
   });
-  const [playerPos, setPlayerPos] = useState(() => {
-    if (typeof window === "undefined") return { x: 16, y: 16 };
-    const width = 290;
-    const height = 92;
-    return {
-      x: Math.max(8, window.innerWidth - width - 16),
-      y: Math.max(8, window.innerHeight - height - 16),
-    };
-  });
+  const [playerPos, setPlayerPos] = useState(getInitialPlayerPos);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -91,6 +96,27 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const onResize = () => {
+      setPlayerPos((prev) => {
+        const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+        const width = playerRef.current?.offsetWidth ?? (isMobile ? 220 : 280);
+        const height = playerRef.current?.offsetHeight ?? (isMobile ? 82 : 90);
+        const maxX = Math.max(8, window.innerWidth - width - 8);
+        const maxY = Math.max(8, window.innerHeight - height - 8);
+
+        return {
+          x: Math.min(Math.max(8, prev.x), maxX),
+          y: isMobile ? 108 : Math.min(Math.max(8, prev.y), maxY),
+        };
+      });
+    };
+
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const handleDragStart = (event) => {
     if (!playerRef.current) return;
 
@@ -145,7 +171,7 @@ export default function App() {
         <div
           ref={playerRef}
           style={{ left: `${playerPos.x}px`, top: `${playerPos.y}px` }}
-          className="fixed z-40 w-[280px] rounded-2xl border border-[#e3d0b9] bg-[#fff9f1]/95 p-2 shadow-[0_10px_22px_rgba(74,48,30,0.18)] backdrop-blur"
+          className="fixed z-40 w-[220px] rounded-2xl border border-[#e3d0b9] bg-[#fff9f1]/95 p-2 shadow-[0_10px_22px_rgba(74,48,30,0.18)] backdrop-blur sm:w-[280px]"
         >
           <div
             onPointerDown={handleDragStart}

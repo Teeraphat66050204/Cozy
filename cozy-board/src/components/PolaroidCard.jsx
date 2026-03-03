@@ -133,6 +133,7 @@ function PolaroidCard({
     <>
       <Group
         ref={groupRef}
+        name="polaroid-card"
         x={card.x}
         y={card.y}
         width={card.w}
