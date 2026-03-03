@@ -762,7 +762,7 @@ export default function PolaroidBoard() {
             onTouchStart={handleStageMouseDown}
             onTouchMove={handleStageMouseMove}
             onTouchEnd={handleStageMouseUp}
-            className="rounded-2xl"
+            className="touch-none rounded-2xl"
           >
             <Layer>
               <Rect x={0} y={0} width={boardWidth} height={boardHeight} fill="rgba(255,255,255,0)" listening={false} />
@@ -818,6 +818,8 @@ export default function PolaroidBoard() {
                   onEditText={handleEditText}
                   hangingMode={hangingMode}
                   clipSrc={clipSrc}
+                  stageWidth={boardWidth}
+                  stageHeight={boardHeight}
                 />
               ))}
             </Layer>

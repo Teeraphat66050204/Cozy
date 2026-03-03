@@ -41,6 +41,8 @@ function PolaroidCard({
   onDragStateChange,
   hangingMode,
   clipSrc,
+  stageWidth,
+  stageHeight,
 }) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -78,15 +80,6 @@ function PolaroidCard({
     const seed = Array.from(String(card.id)).reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return -(2 + (seed % 3));
   }, [card.id]);
-
-  const dateLabel = useMemo(() => {
-    const rawDate = card.updated_at ? new Date(card.updated_at) : new Date();
-    return rawDate.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  }, [card.updated_at]);
 
   useEffect(() => {
     if (!isSelected || !trRef.current || !groupRef.current) return;
@@ -146,6 +139,14 @@ function PolaroidCard({
         height={card.h}
         rotation={card.rotation}
         draggable
+        dragBoundFunc={(pos) => {
+          const maxX = Math.max(0, stageWidth - card.w);
+          const maxY = Math.max(0, stageHeight - card.h);
+          return {
+            x: Math.min(Math.max(0, pos.x), maxX),
+            y: Math.min(Math.max(0, pos.y), maxY),
+          };
+        }}
         onClick={() => onSelect(card.id)}
         onTap={() => onSelect(card.id)}
         onDblClick={() => onEditText(card.id)}
@@ -244,7 +245,7 @@ function PolaroidCard({
           y={card.h - bottomHeight + 12}
           width={Math.max(40, innerWidth - 12)}
           height={Math.max(34, bottomHeight - 20)}
-          text={card.text ? `${dateLabel}  ${card.text}` : `${dateLabel}  add caption`}
+          text={card.text || "add caption"}
           align="center"
           verticalAlign="middle"
           rotation={captionTilt}
